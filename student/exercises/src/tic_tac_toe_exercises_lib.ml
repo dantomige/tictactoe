@@ -61,14 +61,25 @@ let non_win =
 
    After you are done with this implementation, you can uncomment out
    "evaluate" test cases found below in this file. *)
+
+let all_slots ~(game_kind : Game_kind.t) : Position.t list =
+  let board_length = Protocol.Game_kind.board_length game_kind in
+  let all_moves =
+    List.init board_length ~f:(fun row ->
+      List.init board_length ~f:(fun col -> { Position.row; column = col }))
+  in
+  List.concat all_moves
+;;
+
 let available_moves
   ~(game_kind : Game_kind.t)
   ~(pieces : Piece.t Position.Map.t)
   : Position.t list
   =
-  ignore game_kind;
-  ignore pieces;
-  failwith "Implement me!"
+  let all_pos = all_slots ~game_kind in
+  let filled_pos = Map.keys pieces in
+  List.filter all_pos ~f:(fun pos ->
+    not (List.mem filled_pos pos ~equal:Position.equal))
 ;;
 
 (* Exercise 2.
@@ -84,6 +95,8 @@ let evaluate ~(game_kind : Game_kind.t) ~(pieces : Piece.t Position.Map.t)
   ignore game_kind;
   failwith "Implement me!"
 ;;
+
+(* let win_length = Protocol.Game_kind.win_length game_kind in win_length *)
 
 (* Exercise 3. *)
 let winning_moves
@@ -208,16 +221,26 @@ let%expect_test "print_non_win" =
 ;;
 
 (* After you've implemented [available_moves], uncomment these tests! *)
-(* let%expect_test "yes available_moves" = let (moves : Position.t list) =
-   available_moves ~game_kind:non_win.game_kind ~pieces:non_win.pieces |>
-   List.sort ~compare:Position.compare in print_s [%sexp (moves : Position.t
-   list)]; [%expect {| (((row 0) (column 1)) ((row 0) (column 2)) ((row 1)
-   (column 1)) ((row 1) (column 2)) ((row 2) (column 1))) |}] ;;
+let%expect_test "yes available_moves" =
+  let (moves : Position.t list) =
+    available_moves ~game_kind:non_win.game_kind ~pieces:non_win.pieces
+    |> List.sort ~compare:Position.compare
+  in
+  print_s [%sexp (moves : Position.t list)];
+  [%expect
+    {| 
+   (((row 0) (column 1)) ((row 0) (column 2)) ((row 1) (column 1))
+    ((row 1) (column 2)) ((row 2) (column 1))) |}]
+;;
 
-   let%expect_test "no available_moves" = let (moves : Position.t list) =
-   available_moves ~game_kind:win_for_x.game_kind ~pieces:win_for_x.pieces |>
-   List.sort ~compare:Position.compare in print_s [%sexp (moves : Position.t
-   list)]; [%expect {| () |}] ;; *)
+let%expect_test "no available_moves" =
+  let (moves : Position.t list) =
+    available_moves ~game_kind:win_for_x.game_kind ~pieces:win_for_x.pieces
+    |> List.sort ~compare:Position.compare
+  in
+  print_s [%sexp (moves : Position.t list)];
+  [%expect {| () |}]
+;;
 
 (* When you've implemented the [evaluate] function, uncomment the next two
    tests! *)
