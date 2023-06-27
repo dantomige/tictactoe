@@ -88,12 +88,136 @@ let available_moves
 
    After you are done with this implementation, you can uncomment out
    "evaluate" test cases found below in this file. *)
+
+let check_for_game_win 
+  (curr_pos: Position.t) 
+  (game_kind: Game_kind.t)
+  (pieces: Piece.t Position.Map.t) 
+  (piece_type: Piece.t): bool =
+
+  let win_length = Game_kind.win_length game_kind in
+  
+  let up, right, up_right, down_right = 
+    Position.up, 
+    Position.right,
+    (fun position -> position |> Position.up |> Position.right),
+    (fun position -> position |> Position.down |> Position.right) in 
+
+  let rec check_direction location direction piece_type length =
+    match Map.find pieces location with 
+    | None -> false
+    | Some piece -> 
+      if (Piece.equal piece_type piece)
+        then
+          (if length = 1 then true else check_direction (direction location) direction piece_type (length - 1))
+        else
+          false in
+
+  let direction_list = [up; right; up_right; down_right] in
+  
+  let rec check_all_directions start_location piece_type direction_list = 
+    match direction_list with
+    | [] -> false
+    | direction :: rest -> check_direction start_location direction piece_type win_length 
+    || check_all_directions start_location piece_type rest in 
+  
+  check_all_directions curr_pos piece_type direction_list
+
+;;
+  
+
 let evaluate ~(game_kind : Game_kind.t) ~(pieces : Piece.t Position.Map.t)
   : Evaluation.t
   =
-  ignore pieces;
   ignore game_kind;
-  failwith "Implement me!"
+  ignore pieces;
+  Game_continues
+  (* let all_positions = Map.keys pieces in
+  let x_positions = List.filter ~f:(fun pos -> match Map.find pieces pos with |None| Some O -> false |Some X -> true) all_positions in
+  let o_positions = List.filter ~f:(fun pos -> match Map.find pieces pos with |None| Some O -> false |Some X -> true) all_positions in
+  
+  let rec search_positions_for_win positions (pieces: Piece.t Position.Map.t) (piece_type: Piece.t)=
+    match (positions: `a list) with 
+    | [] ->
+    | curr_position :: rest -> check_for_game_win curr_position game_kind pieces piece_type || search_positions_for_win rest piece_type in ()
+   *)
+  
+    (* TRIED THIS SOLUTION AND FAILED *)
+  (* let win_length = Protocol.Game_kind.win_length game_kind in
+  let board_length = Protocol.Game_kind.win_length game_kind in
+
+  let universal_evaluator ~(dir_of_evaluation) ~(dir_of_traversal) ~(start) =
+
+    (* Creating the helper function to create the evaluation array *)
+    let rec eval_start_pos_creator length pos = match board_length with
+    | 0 -> []
+    | _ -> pos :: eval_start_pos_creator (length - 1) (dir_of_evaluation pos) in
+
+    (* Creating an array where each element represents the start of a new col/row/diag *)
+    let eval_start_pos = eval_start_pos_creator board_length start in
+
+    (* Finds all the starting positions for the windows in a given direction of traversal**)
+    let traversal_start_pos_creator start = 
+
+      (** Finds the end of a window. Necessary to check if a given window is inbounds*)
+      let rec find_end_of_window length pos = match length with 
+        | 1 -> pos
+        | _ -> find_end_of_window (length - 1) (dir_of_traversal pos) in 
+
+      (** Boolean to determine if a window is inbounds*)
+      let in_bounds length start = 
+        let end_pos = find_end_of_window length start in
+        if Position.in_bounds end_pos ~game_kind then true else false in
+
+      let rec final_traversal_start_pos_creator (pos : Position.t) =
+        match (in_bounds win_length pos: bool) with 
+        | true -> pos :: final_traversal_start_pos_creator (dir_of_traversal pos)
+        | false -> [] in
+
+      final_traversal_start_pos_creator start in
+
+      
+    let all_starting_pos = List.concat (List.map ~f:traversal_start_pos_creator eval_start_pos) in
+
+    (* A function to determine if a sliding window has a winner and if so who that winner is *)
+    let check_window_winner pos = 
+      let rec create_sliding_window window_length curr_pos = match window_length with 
+      | 0 -> []
+        (* Returns the piece at the current position *)
+      | _ -> (Map.find pieces curr_pos) :: create_sliding_window (window_length - 1) (dir_of_traversal curr_pos) in 
+      
+      (** Checks if a window isnt filled i.e. it has None *)
+      let curr_window = create_sliding_window win_length pos in
+      let piece_equality left right = match left, right with 
+      | Some left, Some right -> Protocol.Piece.equal left right
+      | None, None -> true
+      | _, _ -> false in
+
+      (**Winning array*)
+      let winning_array (piece: Piece.t) : Piece.t option list = List.init win_length ~f:(fun x -> Some piece) in
+      
+      (* *Is the list not filled all the away? *)
+      match List.mem curr_window None piece_equality with
+      | true -> None 
+      | false -> 
+      if List.equal piece_equality (winning_array Protocol.Piece.O) curr_window  
+        then Some Protocol.Piece.O
+      else if List.equal piece_equality (winning_array Protocol.Piece.X) curr_window 
+        then Some Protocol.Piece.X
+      else None in 
+    
+      (* Checks each of the windows for a window, filters out None *)
+    let all_windows = List.filter 
+      (List.map all_starting_pos ~f:check_window_winner) (fun x -> piece_equality None x) in
+    
+    match List.mem all_windows (Some Protocol.Piece.O), List.mem all_windows (Some Protocol.Piece.X) with 
+    | false, false -> Protocol.Evaluation.Game_continues
+    | true, false -> Protocol.Evaluation.Game_over of {winner: Protocol.Piece.O}
+    | false, true -> Protocol.Evaluation.Game_over of {winner: Protocol.Piece.X}
+    | true, true -> Protocol.Evaluation.Illegal_state  *)
+
+
+      (** Matching whether each piece exists in a list*)
 ;;
 
 (* let win_length = Protocol.Game_kind.win_length game_kind in win_length *)
