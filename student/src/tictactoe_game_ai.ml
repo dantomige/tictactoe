@@ -34,10 +34,10 @@ let pick_winning_move_if_possible_strategy
   ~(pieces : Piece.t Position.Map.t)
   : Position.t
   =
-  ignore me;
-  ignore game_kind;
-  ignore pieces;
-  failwith "Implement me!"
+  let possible_winning_moves = winning_moves ~me ~game_kind ~pieces in
+  match possible_winning_moves with
+  | [] -> random_move_strategy ~game_kind ~pieces
+  | _ -> List.random_element_exn possible_winning_moves
 ;;
 
 (* disables unused warning. Feel free to delete once it's used. *)
@@ -56,10 +56,14 @@ let pick_winning_move_or_block_if_possible_strategy
   ~(pieces : Piece.t Position.Map.t)
   : Position.t
   =
-  ignore me;
-  ignore game_kind;
-  ignore pieces;
-  failwith "Implement me!"
+  let possible_winning_moves = winning_moves ~me ~game_kind ~pieces in
+  match possible_winning_moves with
+  | [] ->
+    let possible_blocking_moves = losing_moves ~me ~game_kind ~pieces in
+    (match possible_blocking_moves with
+     | [] -> random_move_strategy ~game_kind ~pieces
+     | _ -> List.random_element_exn possible_blocking_moves)
+  | _ -> List.random_element_exn possible_winning_moves
 ;;
 
 (* disables unused warning. Feel free to delete once it's used. *)
@@ -71,10 +75,15 @@ let score
   ~(pieces : Piece.t Position.Map.t)
   : float
   =
-  ignore me;
-  ignore game_kind;
-  ignore pieces;
-  0.0
+  let game_state = evaluate ~game_kind ~pieces in
+  match game_state with
+  | Game_over { winner = player } ->
+    (match player with
+     | None -> 0.0
+     | Some player ->
+       if Piece.equal player me then Float.infinity else Float.neg_infinity)
+  | Game_continues -> 0.0
+  | Illegal_state -> 0.0
 ;;
 
 let _ = score
@@ -91,6 +100,8 @@ let _ = score
 let compute_next_move ~(me : Piece.t) ~(game_state : Game_state.t)
   : Position.t
   =
-  ignore me;
-  random_move_strategy ~game_kind: game_state.game_kind ~pieces: game_state.pieces
+  pick_winning_move_or_block_if_possible_strategy
+    ~me
+    ~game_kind:game_state.game_kind
+    ~pieces:game_state.pieces
 ;;
