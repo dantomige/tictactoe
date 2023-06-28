@@ -88,6 +88,72 @@ let score
 
 let _ = score
 
+let rec minimax
+  ~(me : Piece.t)
+  ~(game_kind : Game_kind.t)
+  ~(pieces : Piece.t Position.Map.t)
+  ~(depth : int)
+  ~(is_maximizing_player : bool)
+  : float * Position.t option
+  =
+  if depth = 0
+     || List.equal Position.equal (available_moves ~game_kind ~pieces) []
+  then (
+    let node_value = score ~me ~game_kind ~pieces in
+    node_value, None)
+  else if is_maximizing_player (*Maximizing player*)
+  then (
+    let default_min = Float.neg_infinity, None in
+    let possible_moves = available_moves ~game_kind ~pieces in
+    (*List of tuples of the form (score, move_to_play)*)
+    (*Getting all the possible moves and their score recursively*)
+    let move_outcomes =
+      List.map possible_moves ~f:(fun choice ->
+        let new_pieces = Map.set pieces ~key:choice ~data:X in
+        let next_node =
+          minimax
+            ~me
+            ~game_kind
+            ~pieces:new_pieces
+            ~depth:(depth - 1)
+            ~is_maximizing_player:(not is_maximizing_player)
+        in
+        fst next_node, Some choice)
+    in
+    List.fold
+      move_outcomes
+      ~init:default_min
+      ~f:(fun curr_choice new_choice ->
+      if Float.( >. ) (fst curr_choice) (fst new_choice)
+      then curr_choice
+      else new_choice))
+  else (
+    let default_min = Float.infinity, None in
+    let possible_moves = available_moves ~game_kind ~pieces in
+    (*List of tuples of the form (score, move_to_play)*)
+    (*Getting all the possible moves and their score recursively*)
+    let move_outcomes =
+      List.map possible_moves ~f:(fun choice ->
+        let new_pieces = Map.set pieces ~key:choice ~data:X in
+        let next_node =
+          minimax
+            ~me
+            ~game_kind
+            ~pieces:new_pieces
+            ~depth:(depth - 1)
+            ~is_maximizing_player:(not is_maximizing_player)
+        in
+        fst next_node, Some choice)
+    in
+    List.fold
+      move_outcomes
+      ~init:default_min
+      ~f:(fun curr_choice new_choice ->
+      if Float.( >. ) (fst curr_choice) (fst new_choice)
+      then curr_choice
+      else new_choice))
+;;
+
 (* [compute_next_move] is your Game AI's function.
 
    [game_ai.exe] will connect, communicate, and play with the game server,
@@ -100,8 +166,20 @@ let _ = score
 let compute_next_move ~(me : Piece.t) ~(game_state : Game_state.t)
   : Position.t
   =
-  pick_winning_move_or_block_if_possible_strategy
-    ~me
-    ~game_kind:game_state.game_kind
-    ~pieces:game_state.pieces
+  (* pick_winning_move_or_block_if_possible_strategy ~me
+     ~game_kind:game_state.game_kind ~pieces:game_state.pieces *)
+  let _, best_move =
+    minimax
+      ~me
+      ~game_kind:game_state.game_kind
+      ~pieces:game_state.pieces
+      ~depth:10
+      ~is_maximizing_player:true
+  in
+  match best_move with
+  | None ->
+    random_move_strategy
+      ~game_kind:game_state.game_kind
+      ~pieces:game_state.pieces
+  | Some position -> position
 ;;
