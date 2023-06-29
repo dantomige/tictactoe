@@ -73,17 +73,19 @@ let score
   ~(me : Piece.t)
   ~(game_kind : Game_kind.t)
   ~(pieces : Piece.t Position.Map.t)
-  : float
+  : float * Evaluation.t
   =
   let game_state = evaluate ~game_kind ~pieces in
   match game_state with
   | Game_over { winner = player } ->
     (match player with
-     | None -> 0.0
+     | None -> 0.0, Game_over { winner = None }
      | Some player ->
-       if Piece.equal player me then Float.infinity else Float.neg_infinity)
-  | Game_continues -> 0.0
-  | Illegal_state -> 0.0
+       if Piece.equal player me
+       then Float.infinity, Game_over { winner = Some player }
+       else Float.neg_infinity, Game_over { winner = Some player })
+  | Game_continues -> 0.0, Game_continues
+  | Illegal_state -> 0.0, Illegal_state
 ;;
 
 let _ = score
@@ -96,10 +98,14 @@ let rec minimax
   ~(is_maximizing_player : bool)
   : float * Position.t option
   =
+  let score, game_evaluation = score ~me ~game_kind ~pieces in
   if depth = 0
-     || List.equal Position.equal (available_moves ~game_kind ~pieces) []
+     ||
+     match game_evaluation with
+     | Game_over _ -> true
+     | Game_continues | Illegal_state -> false
   then (
-    let node_value = score ~me ~game_kind ~pieces in
+    let node_value = score in
     node_value, None)
   else if is_maximizing_player (*Maximizing player*)
   then (
@@ -109,7 +115,7 @@ let rec minimax
     (*Getting all the possible moves and their score recursively*)
     let move_outcomes =
       List.map possible_moves ~f:(fun choice ->
-        let new_pieces = Map.set pieces ~key:choice ~data:X in
+        let new_pieces = Map.set pieces ~key:choice ~data:me in
         let next_node =
           minimax
             ~me
@@ -128,13 +134,13 @@ let rec minimax
       then curr_choice
       else new_choice))
   else (
-    let default_min = Float.infinity, None in
+    let default_max = Float.infinity, None in
     let possible_moves = available_moves ~game_kind ~pieces in
     (*List of tuples of the form (score, move_to_play)*)
     (*Getting all the possible moves and their score recursively*)
     let move_outcomes =
       List.map possible_moves ~f:(fun choice ->
-        let new_pieces = Map.set pieces ~key:choice ~data:X in
+        let new_pieces = Map.set pieces ~key:choice ~data:(Piece.flip me) in
         let next_node =
           minimax
             ~me
@@ -147,9 +153,9 @@ let rec minimax
     in
     List.fold
       move_outcomes
-      ~init:default_min
+      ~init:default_max
       ~f:(fun curr_choice new_choice ->
-      if Float.( >. ) (fst curr_choice) (fst new_choice)
+      if Float.( <. ) (fst curr_choice) (fst new_choice)
       then curr_choice
       else new_choice))
 ;;
@@ -168,13 +174,16 @@ let compute_next_move ~(me : Piece.t) ~(game_state : Game_state.t)
   =
   (* pick_winning_move_or_block_if_possible_strategy ~me
      ~game_kind:game_state.game_kind ~pieces:game_state.pieces *)
-  let _, best_move =
+  let score, best_move =
     minimax
       ~me
       ~game_kind:game_state.game_kind
       ~pieces:game_state.pieces
-      ~depth:10
+      ~depth:3
       ~is_maximizing_player:true
+  in
+  let () =
+    Async.print_s [%message (score : float) (best_move : Position.t option)]
   in
   match best_move with
   | None ->
