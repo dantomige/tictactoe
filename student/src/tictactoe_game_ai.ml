@@ -88,6 +88,25 @@ let score
   | Illegal_state -> 0.0, Illegal_state
 ;;
 
+(* let distance_func dir distance = ;;
+
+   let space_func = ;
+
+   let pattern_matchings = [
+
+   ]
+
+   let match_patterns pattern pieces pos
+
+   let omok_current_board_score me game_kind pieces : float =
+
+   ;;
+
+   let current_board_score ~(me : Piece.t) ~(game_kind : Game_kind.t)
+   ~(pieces : Piece.t Position.Map.t) : float = match game_kind with |
+   Tic_tac_toe -> 0.0 | Omok -> omok_current_board_score me game_kind pieces
+   ;; *)
+
 let _ = score
 
 let rec minimax
@@ -179,7 +198,7 @@ let compute_next_move ~(me : Piece.t) ~(game_state : Game_state.t)
       ~me
       ~game_kind:game_state.game_kind
       ~pieces:game_state.pieces
-      ~depth:3
+      ~depth:4
       ~is_maximizing_player:true
   in
   let () =
